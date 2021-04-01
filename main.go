@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/x509"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -60,7 +63,7 @@ func main() {
 			&tls.SupportedPointsExtension{SupportedPoints: []byte{
 				0x00, // pointFormatUncompressed
 			}},
-			&tls.SupportedCurvesExtension{[]tls.CurveID{
+			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 				tls.CurveID(tls.GREASE_PLACEHOLDER),
 				tls.X25519,
 				tls.CurveP256,
@@ -73,6 +76,15 @@ func main() {
 	err = tlsConn.Handshake()
 	if err != nil {
 		fmt.Printf("tlsConn.Handshake() failed: %+v\n", err)
+		printExtraErrorDetails(err)
 		return
+	}
+}
+
+func printExtraErrorDetails(err error) {
+	var uaerr x509.UnknownAuthorityError
+	if errors.As(err, &uaerr) {
+		certdata := base64.StdEncoding.EncodeToString(uaerr.Cert.Raw)
+		fmt.Printf("%+v\n", certdata)
 	}
 }
